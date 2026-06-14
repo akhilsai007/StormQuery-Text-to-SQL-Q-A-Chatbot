@@ -14,15 +14,15 @@ Unlike a typical "chat with your data" tool built on semantic search, StormQuery
 
 **Ranking question with an automatic bar chart**
 
-![Bar chart answer](screenshots/chat_chart.png)
+![Bar chart answer](screenshots/chat_chart.jepg)
 
 **Map question — events plotted by location**
 
-![Map answer](screenshots/map.png)
+![Map answer](screenshots/map.jpeg)
 
 **Downloadable PDF report (chart embedded, SQL excluded)**
 
-![PDF report](screenshots/pdf_report.png)
+![PDF report](screenshots/pdf_report.jpeg)
 
 ---
 
