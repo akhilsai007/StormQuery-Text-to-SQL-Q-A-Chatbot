@@ -14,7 +14,7 @@ Unlike a typical "chat with your data" tool built on semantic search, StormQuery
 
 **Ranking question with an automatic bar chart**
 
-![Bar chart answer](screenshots/chat_chart.jepg)
+![Bar chart answer](screenshots/chat_chart.jpeg)
 
 **Map question — events plotted by location**
 
