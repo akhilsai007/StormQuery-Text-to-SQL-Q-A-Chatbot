@@ -1,0 +1,14 @@
+# Secrets — NEVER commit your API key
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Project data (large and/or regeneratable — keep out of git)
+storm_events.duckdb
+noaa_raw/
+
+# macOS
+.DS_Store

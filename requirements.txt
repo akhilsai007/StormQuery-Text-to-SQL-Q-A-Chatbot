@@ -1,0 +1,8 @@
+pandas
+duckdb
+google-genai
+openpyxl
+reportlab
+matplotlib
+streamlit
+python-dotenv
