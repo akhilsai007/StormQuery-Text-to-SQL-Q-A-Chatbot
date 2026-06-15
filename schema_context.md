@@ -32,8 +32,6 @@ Table `storm_events` has 2,023,627 rows covering 1950–2026.
 - `end_lon` (DOUBLE) — Longitude where the event ended.
 - `begin_location` (VARCHAR) — Nearest place name to where the event began.
 - `end_location` (VARCHAR) — Nearest place name to where the event ended.
-- `episode_narrative` (VARCHAR) — Free-text summary of the whole weather episode.
-- `event_narrative` (VARCHAR) — Free-text summary of this specific event.
 - `data_source` (VARCHAR) — NOAA data source code.
 - `damage_property` (DOUBLE) — Property damage in US dollars (numeric; NULL if not reported).
 - `damage_crops` (DOUBLE) — Crop damage in US dollars (numeric; NULL if not reported).

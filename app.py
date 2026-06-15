@@ -24,6 +24,11 @@ load_dotenv()  # read GEMINI_API_KEY (and any other vars) from a local .env file
 
 DB_PATH = "storm_events.duckdb"
 
+# For DEPLOYMENT only: the database is too large for the GitHub repo, so it's
+# hosted as a GitHub Release asset and downloaded on first launch. Paste that
+# asset's download URL here. Leave blank for local use (you already have the file).
+DB_URL = "https://github.com/akhilsai007/StormQuery-Text-to-SQL-Q-A-Chatbot/releases/download/v1.0/storm_events.duckdb"  # e.g. "https://github.com/<user>/<repo>/releases/download/v1.0/storm_events.duckdb"
+
 EXAMPLE_QUESTIONS = [
     "How many tornadoes hit Texas in 2011?",
     "Which 5 states had the most hail events since 2015?",
@@ -31,6 +36,28 @@ EXAMPLE_QUESTIONS = [
 ]
 
 st.set_page_config(page_title="Storm Events Chatbot", page_icon="⛈️", layout="centered")
+
+
+def ensure_database() -> None:
+    """If the database file is missing but DB_URL is set, download it (once),
+    showing a progress bar. Does nothing when the file already exists locally."""
+    if os.path.exists(DB_PATH) or not DB_URL:
+        return
+    import urllib.request
+
+    bar = st.progress(0.0, text="Downloading the storm events database (first run only)…")
+
+    def _hook(block_num, block_size, total_size):
+        if total_size > 0:
+            done = block_num * block_size
+            pct = min(done / total_size, 1.0)
+            bar.progress(pct, text=f"Downloading database… {done // (1 << 20)}/"
+                                   f"{total_size // (1 << 20)} MB")
+
+    try:
+        urllib.request.urlretrieve(DB_URL, DB_PATH, reporthook=_hook)
+    finally:
+        bar.empty()
 
 
 # ----------------------------------------------------------------------
@@ -45,10 +72,13 @@ if not os.environ.get("GEMINI_API_KEY"):
     )
     st.stop()
 
+ensure_database()  # download the DB on a fresh deployment if DB_URL is set
+
 if not os.path.exists(DB_PATH):
     st.error(
-        f"**{DB_PATH} not found.** Build the database first by running "
-        "`python build_database.py` in this folder, then restart the app."
+        f"**{DB_PATH} not found.** Build it locally with `python build_database.py`, "
+        "or (for deployment) set `DB_URL` near the top of app.py to the database's "
+        "download URL."
     )
     st.stop()
 
