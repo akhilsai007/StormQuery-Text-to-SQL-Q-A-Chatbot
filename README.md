@@ -2,7 +2,7 @@
 
 *Ask 76 years of U.S. severe-weather data in plain English — and get answers backed by SQL, with charts and downloadable reports.*
 
-StormQuery is a natural-language chatbot over the [NOAA Storm Events Database](https://www.ncei.noaa.gov/stormevents/) (~1.7 million events, 1950–2026). You ask a question in English; it translates that question into SQL, runs it against a local database, and returns an accurate, verifiable answer — with an automatic chart or map and one-click export to CSV, Excel, or PDF.
+StormQuery is a natural-language chatbot over the [NOAA Storm Events Database](https://www.ncei.noaa.gov/stormevents/) (~2 million events, 1950–2026). You ask a question in English; it translates that question into SQL, runs it against a local database, and returns an accurate, verifiable answer — with an automatic chart or map and one-click export to CSV, Excel, or PDF.
 
 Unlike a typical "chat with your data" tool built on semantic search, StormQuery uses a **text-to-SQL** approach: the language model writes a query and a real database computes the answer. This makes aggregations (counts, sums, rankings) *exact and verifiable* rather than approximate.
 
@@ -28,7 +28,7 @@ Unlike a typical "chat with your data" tool built on semantic search, StormQuery
 
 ## Features
 
-- **Natural-language questions** answered over ~1.7M storm events.
+- **Natural-language questions** answered over ~2M storm events.
 - **Text-to-SQL engine** with a **self-correction loop** — a failed query is retried using the database's own error message.
 - **Verifiable answers** — the generated SQL is shown for every response.
 - **Automatic visualizations** — a map for location results, a bar chart for rankings and trends, a table otherwise.
@@ -44,7 +44,7 @@ Unlike a typical "chat with your data" tool built on semantic search, StormQuery
 flowchart TD
     Q[User question] --> L1[Gemini: question to SQL]
     L1 --> V{Validate:<br/>SELECT-only}
-    V --> DB[(DuckDB<br/>~1.7M events)]
+    V --> DB[(DuckDB<br/>~2M events)]
     DB --> R[Result rows]
     R --> L2[Gemini: rows to<br/>plain-English answer]
     L2 --> OUT[Answer + table + chart]
@@ -93,8 +93,8 @@ flowchart TD
 
 ```bash
 # 1. Clone and enter the project
-git clone https://github.com/akhilsai007/-StormQuery-Text-to-SQL-Q-A-Chatbot.git
-cd stormquery
+git clone https://github.com/akhilsai007/StormQuery-Text-to-SQL-Q-A-Chatbot.git
+cd StormQuery-Text-to-SQL-Q-A-Chatbot
 
 # 2. Create and activate a virtual environment
 python3 -m venv venv

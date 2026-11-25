@@ -13,6 +13,7 @@ Run it (with your venv active, GEMINI_API_KEY set, and storm_events.duckdb built
 
 import os
 
+import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -114,6 +115,67 @@ def new_id() -> int:
 # ----------------------------------------------------------------------
 # Rendering
 # ----------------------------------------------------------------------
+# Readable labels for common technical column names; anything not listed falls
+# back to a generic "snake_case -> Title Case" transform.
+_COLUMN_LABELS = {
+    "count_star()": "Count",
+    "count(*)": "Count",
+    "state": "State",
+    "year": "Year",
+    "month_name": "Month",
+    "event_type": "Event Type",
+    "cz_name": "County / Zone",
+    "begin_lat": "Latitude",
+    "begin_lon": "Longitude",
+    "end_lat": "End Latitude",
+    "end_lon": "End Longitude",
+    "deaths_direct": "Direct Deaths",
+    "deaths_indirect": "Indirect Deaths",
+    "injuries_direct": "Direct Injuries",
+    "injuries_indirect": "Indirect Injuries",
+    "damage_property": "Property Damage ($)",
+    "damage_crops": "Crop Damage ($)",
+    "magnitude": "Magnitude",
+    "tor_f_scale": "Tornado Scale",
+    "source": "Source",
+}
+
+
+def _pretty_label(name) -> str:
+    key = str(name).strip().lower()
+    if key in _COLUMN_LABELS:
+        return _COLUMN_LABELS[key]
+    cleaned = key.replace("()", "").replace("(*)", "").replace("_", " ").strip()
+    return cleaned.title() if cleaned else str(name)
+
+
+def _looks_like_coord(name) -> bool:
+    n = str(name).lower()
+    return "lat" in n or "lon" in n
+
+
+def render_result_table(df) -> None:
+    """Show the results with readable headers and thousands-separated numbers.
+
+    Works on a display copy only — the original df (used for charts and the
+    CSV/Excel/PDF downloads) keeps its raw column names and numeric types.
+    Latitude/longitude are left as plain decimals.
+    """
+    labels = {c: _pretty_label(c) for c in df.columns}
+    column_config = {}
+    for col in df.columns:
+        if not _looks_like_coord(col) and pd.api.types.is_numeric_dtype(df[col]):
+            column_config[labels[col]] = st.column_config.NumberColumn(format="localized")
+    disp = df.rename(columns=labels)
+    try:
+        st.dataframe(disp, use_container_width=True, hide_index=True,
+                     column_config=column_config)
+    except Exception:
+        # If this Streamlit version dislikes the column config, fall back to a
+        # plain table (still with the readable headers).
+        st.dataframe(disp, use_container_width=True, hide_index=True)
+
+
 def render_visual(df) -> None:
     """Show a map or bar chart when the result shape suggests one.
 
@@ -146,7 +208,7 @@ def render_assistant(result, mid: int) -> None:
     df = result.dataframe
     if df is not None and len(df) > 0:
         render_visual(df)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        render_result_table(df)
 
         with st.expander("View the SQL used"):
             st.code(result.sql, language="sql")
@@ -177,7 +239,7 @@ with st.sidebar:
     st.markdown(
         "Ask questions in plain English about the **NOAA Storm Events Database** "
         "(1950–present). Your question is turned into SQL, run against a local "
-        "database of ~1.7 million events, and answered — with the data available "
+        "database of ~2 million events, and answered — with the data available "
         "to download."
     )
     st.caption(

@@ -19,7 +19,7 @@ automatic visualizations).
 ## 2. Introduction & Problem Statement  (~1 page)
 - The assignment: build a chatbot that answers questions from NOAA's National
   Weather Service Storm Events dataset, with answers downloadable in a file.
-- The dataset in one line: NOAA Storm Events, ~1.7 million records, 1950–2026.
+- The dataset in one line: NOAA Storm Events, ~2 million records, 1950–2026.
 - **The key framing to state up front:** this is *structured, numerical* data, and
   almost every useful question is an *aggregation* (counts, sums, rankings). Name
   this early — it justifies your whole approach.
@@ -27,7 +27,7 @@ automatic visualizations).
 - *Prompt:* Who would use this and why is it useful?
 
 ## 3. The Dataset  (~1 page)
-- Source and scale: NOAA NCEI; the bulk "details" files; ~1.7M rows across 76 years.
+- Source and scale: NOAA NCEI; the bulk "details" files; ~2M rows across 76 years.
 - Key fields: event_type, state, dates, deaths/injuries, property/crop damage,
   coordinates, and free-text narratives.
 - **Data challenges you handled** (include these — they show rigor):
@@ -57,9 +57,9 @@ State each choice *and the tradeoff reasoning*:
   queries you run; embedded (a single file, no server) like SQLite but far faster
   on wide-table aggregations. Chosen over Postgres (no need for a server when the
   workload is read-only and single-user) and over SQLite (slower on analytics).
-- **Language model — Google Gemini 2.5 Flash.** Free-tier eligible and strong at
-  SQL. **The deliberate tradeoff:** you chose 2.5 Flash over the newer, higher-
-  benchmark 3.5 Flash because free-tier *capacity* (~250 requests/day vs ~20)
+- **Language model — Google Gemini 2.5 Flash-Lite.** Free-tier eligible and strong at
+  SQL. **The deliberate tradeoff:** you chose 2.5 Flash-Lite (~1,000 requests/day) over 2.5 Flash and the newer, higher-
+  benchmark 3.5 Flash because free-tier *capacity* (~1,000 vs ~250 vs ~20 requests/day)
   mattered more for building and demoing than a marginal quality gain — and because
   your heavy schema grounding means a mid-tier model produces correct SQL reliably.
   *(This "capacity-to-quality tradeoff for a grounded task" is a sophisticated point

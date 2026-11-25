@@ -36,8 +36,8 @@ DB_PATH = "storm_events.duckdb"
 CONTEXT_PATH = "schema_context.md"
 
 # Default model. Free-tier daily limits vary A LOT by model:
-#   gemini-2.5-flash       ~250 requests/day  (good quality — default)
-#   gemini-2.5-flash-lite  ~1,000+ requests/day (more headroom, slightly lower quality)
+#   gemini-2.5-flash       ~250 requests/day  (good quality)
+#   gemini-2.5-flash-lite  ~1,000+ requests/day (more headroom — default)
 #   gemini-3.5-flash       ~20 requests/day   (newest/best, but tiny free quota)
 # Each question uses ~2 calls (SQL + summary). Change this one line to switch.
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
