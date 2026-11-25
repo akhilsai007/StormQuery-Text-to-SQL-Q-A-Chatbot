@@ -83,3 +83,39 @@ def test_sum_over_no_rows_is_null(make_engine):
     eng, _ = make_engine([sql, "No damage recorded."])
     out = eng.ask("q")
     assert out.error is None and pd.isna(out.dataframe.iloc[0, 0])
+
+
+def test_fallback_model_used_when_quota_exhausted(make_engine):
+    eng, client = make_engine([Exception("429 RESOURCE_EXHAUSTED"), TEXAS_2011, "ok"],
+                              fallback_models=("backup-model",))
+    out = eng.ask("q")
+    assert out.error is None and int(out.dataframe.iloc[0, 0]) == 2
+    assert eng.model == "backup-model"          # sticks with the model that worked
+
+
+def test_no_fallback_still_reports_rate_limit(make_engine):
+    eng, _ = make_engine([Exception("429 RESOURCE_EXHAUSTED")])
+    assert "rate limit" in eng.ask("q").error.lower()
+
+
+def test_env_can_skip_summary_and_set_models(make_engine, monkeypatch):
+    monkeypatch.setenv("STORMQUERY_SUMMARIZE", "0")
+    monkeypatch.setenv("STORMQUERY_MODELS", "m1,m2")
+    eng, client = make_engine([TEXAS_2011])
+    assert eng.summarize is False and eng.model == "m1" and eng.fallback_models == ("m2",)
+    out = eng.ask("q")
+    assert out.answer == "Answer: 2" and len(client.prompts) == 1   # one API call only
+
+
+def test_fallback_on_503_overload(make_engine):
+    eng, _ = make_engine([Exception("503 UNAVAILABLE"), TEXAS_2011, "ok"], fallback_models=("backup",))
+    out = eng.ask("q")
+    assert out.error is None and eng.model == "backup"
+
+
+def test_plain_answer_formats():
+    from engine import StormEventsEngine as E
+    assert E._plain_answer(pd.DataFrame({"n": [1234567]})) == "Answer: 1,234,567"
+    assert E._plain_answer(pd.DataFrame({"d": [float("nan")]})).startswith("Answer: no value")
+    assert E._plain_answer(pd.DataFrame({"s": ["A", "B"], "n": [1, 2]})) == "2 row(s) returned — columns: s, n."
+    assert E._plain_answer(pd.DataFrame({"s": []})) == "No matching records were found."

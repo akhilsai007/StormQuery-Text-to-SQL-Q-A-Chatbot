@@ -26,6 +26,8 @@ the rest of the engine easy to unit-test without an API key.
 
 from __future__ import annotations
 
+import numbers
+import os
 import re
 from dataclasses import dataclass
 
@@ -104,6 +106,12 @@ def _is_rate_limit(err: Exception) -> bool:
     return any(t in s for t in ("resource_exhausted", "429", "quota", "rate limit"))
 
 
+def _is_model_unavailable(err: Exception) -> bool:
+    """True if the model doesn't exist for this key (404) or is temporarily down (503)."""
+    s = str(err).lower()
+    return any(t in s for t in ("404", "not found", "not_found", "503", "unavailable", "overloaded"))
+
+
 _RATE_LIMIT_MSG = (
     "Gemini's free-tier rate limit was reached. Wait a minute and try again, or "
     "switch DEFAULT_MODEL in engine.py to a higher-quota model such as "
@@ -128,14 +136,24 @@ class StormEventsEngine:
         model: str = DEFAULT_MODEL,
         max_rows: int = MAX_ROWS,
         max_retries: int = MAX_RETRIES,
-        summarize: bool = True,
+        summarize: bool | None = None,
         client=None,
+        fallback_models: tuple = (),
     ):
         # read_only=True is the strongest guardrail: the data physically cannot
         # be changed through this connection, whatever SQL is generated.
         self.con = duckdb.connect(db_path, read_only=True)
         with open(context_path, encoding="utf-8") as fh:
             self.context = fh.read()
+        # Optional .env settings (no code change needed):
+        #   STORMQUERY_MODELS=gemini-2.5-flash-lite,gemini-2.5-flash   first = preferred, rest = fallbacks
+        #   STORMQUERY_SUMMARIZE=0   skip the written-summary call (1 API request per question instead of 2)
+        env_models = [m.strip() for m in os.environ.get("STORMQUERY_MODELS", "").split(",") if m.strip()]
+        if env_models and model == DEFAULT_MODEL:
+            model, fallback_models = env_models[0], tuple(env_models[1:])
+        if summarize is None:
+            summarize = os.environ.get("STORMQUERY_SUMMARIZE", "1").strip().lower() not in ("0", "false", "no")
+        self.fallback_models = tuple(fallback_models)
         self.model = model
         self.max_rows = max_rows
         self.max_retries = max_retries
@@ -148,12 +166,22 @@ class StormEventsEngine:
             from google import genai
             self._client = genai.Client()  # picks up GEMINI_API_KEY
         from google.genai import types
-        resp = self._client.models.generate_content(
-            model=self.model,
-            contents=prompt,
-            config=types.GenerateContentConfig(temperature=temperature),
-        )
-        return resp.text or ""
+        candidates = [self.model, *[m for m in self.fallback_models if m != self.model]]
+        for i, name in enumerate(candidates):
+            try:
+                resp = self._client.models.generate_content(
+                    model=name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(temperature=temperature),
+                )
+            except Exception as e:
+                # Quota exhausted or model unavailable -> move on to the next model, if any.
+                if i < len(candidates) - 1 and (_is_rate_limit(e) or _is_model_unavailable(e)):
+                    continue
+                raise
+            self.model = name        # stick with the model that worked
+            return resp.text or ""
+        return ""
 
     # ---- SQL generation ----
     def _build_sql_prompt(self, question, prior_sql=None, prior_error=None) -> str:
@@ -194,6 +222,21 @@ class StormEventsEngine:
         prompt = (f"{_SUMMARY_INSTRUCTIONS}\nQuestion: {question}\n\n"
                   f"SQL result:\n{preview}{tail}\n\nAnswer:")
         return self._call_model(prompt, 0.2).strip()
+
+    # ---- no-API answer line (used when summaries are switched off) ----
+    @staticmethod
+    def _plain_answer(df: pd.DataFrame) -> str:
+        if df.shape == (1, 1):
+            v = df.iloc[0, 0]
+            if pd.isna(v):
+                return "Answer: no value (no matching records, or the values were not reported)."
+            if isinstance(v, numbers.Real) and not isinstance(v, bool):
+                v = f"{int(v):,}" if float(v).is_integer() else f"{float(v):,.2f}"
+            return f"Answer: {v}"
+        if len(df) == 0:
+            return "No matching records were found."
+        cols = ", ".join(str(c) for c in df.columns)
+        return f"{len(df):,} row(s) returned — columns: {cols}."
 
     # ---- orchestration ----
     def ask(self, question: str) -> Answer:
@@ -239,7 +282,7 @@ class StormEventsEngine:
                         result.answer += (" (A written summary couldn't be generated — "
                                           "rate limit reached.)")
             else:
-                result.answer = f"Returned {len(df):,} row(s)."
+                result.answer = self._plain_answer(df)
             return result
 
         result.error = f"Couldn't produce a working query after retries. Last error: {last_error}"
